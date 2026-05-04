@@ -2,50 +2,21 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+data "aws_caller_identity" "current" {}
+
 locals {
   name                = "${var.project_name}-${var.environment}"
   ecr_repository_name = coalesce(var.ecr_repository_name, local.name)
+  ecr_repository_url  = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${local.ecr_repository_name}"
   eks_cluster_name    = coalesce(var.eks_cluster_name, local.name)
   ecs_cluster_name    = coalesce(var.ecs_cluster_name, local.name)
   azs                 = slice(data.aws_availability_zones.available.names, 0, 2)
-  image_uri           = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
+  image_uri           = "${local.ecr_repository_url}:${var.image_tag}"
   common_tags = {
     Project     = var.project_name
     Environment = var.environment
     ManagedBy   = "terraform"
   }
-}
-
-resource "aws_ecr_repository" "app" {
-  name                 = local.ecr_repository_name
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = local.common_tags
-}
-
-resource "aws_ecr_lifecycle_policy" "app" {
-  repository = aws_ecr_repository.app.name
-
-  policy = jsonencode({
-    rules = [
-      {
-        rulePriority = 1
-        description  = "Keep last 20 images"
-        selection = {
-          tagStatus   = "any"
-          countType   = "imageCountMoreThan"
-          countNumber = 20
-        }
-        action = {
-          type = "expire"
-        }
-      }
-    ]
-  })
 }
 
 resource "aws_vpc" "main" {

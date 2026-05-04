@@ -1,6 +1,6 @@
 output "ecr_repository_url" {
   description = "ECR repository URL used by both EKS and ECS."
-  value       = aws_ecr_repository.app.repository_url
+  value       = local.ecr_repository_url
 }
 
 output "eks_cluster_name" {

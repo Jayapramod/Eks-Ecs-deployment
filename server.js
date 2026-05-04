@@ -1,6 +1,7 @@
 const express = require("express");
 const { Pool } = require("pg");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 app.use(cors());
@@ -16,6 +17,10 @@ const pool = new Pool({
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.get("/api/users", async (req, res) => {

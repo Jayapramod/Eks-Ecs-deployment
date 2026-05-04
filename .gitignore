@@ -1,0 +1,11 @@
+node_modules/
+npm-debug.log
+
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform/terraform.tfvars
+terraform/backend.tf
+
+.env
+.env.*

@@ -2,7 +2,7 @@
 
 This starter separates responsibilities:
 
-- Terraform creates AWS infrastructure: VPC, EKS, ECS, load balancer, autoscaling, and logs.
+- Terraform creates AWS infrastructure: VPC, EKS, ECS, separate internet-facing load balancers, autoscaling, and logs.
 - GitHub Actions creates the ECR repository if missing, then builds the Docker image and pushes it to ECR.
 - EKS and ECS both deploy the same ECR image tag.
 
@@ -59,4 +59,4 @@ terraform apply -var-file=terraform.tfvars -var "image_tag=<git-sha>"
 - ECR is created by the build workflow if it does not already exist.
 - RDS is not included yet. Database values are parameterized so RDS and Secrets Manager can be added cleanly later.
 - The ECS service is exposed through an AWS Application Load Balancer.
-- The EKS deployment uses a Kubernetes `LoadBalancer` service for a starter deployment.
+- The EKS deployment is exposed through its own internet-facing Kubernetes service load balancer, separate from the ECS ALB.

@@ -199,6 +199,9 @@ resource "kubernetes_deployment" "app" {
 resource "kubernetes_service" "app" {
   metadata {
     name = "fintech-app"
+    annotations = {
+      "service.beta.kubernetes.io/aws-load-balancer-scheme" = "internet-facing"
+    }
   }
 
   spec {
@@ -244,4 +247,6 @@ resource "kubernetes_horizontal_pod_autoscaler_v2" "app" {
       }
     }
   }
+
+  depends_on = [kubernetes_deployment.app]
 }

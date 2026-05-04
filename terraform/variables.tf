@@ -100,6 +100,18 @@ variable "alarm_actions" {
   default     = []
 }
 
+variable "argocd_git_repo_url" {
+  description = "Git repository URL watched by Argo CD for EKS application manifests."
+  type        = string
+  default     = "https://github.com/Jayapramod/Eks-Ecs-deployment.git"
+}
+
+variable "argocd_app_path" {
+  description = "Repository path containing the Kubernetes manifests for Argo CD."
+  type        = string
+  default     = "k8s/web-app"
+}
+
 variable "ecs_desired_count" {
   description = "Desired number of ECS Fargate tasks."
   type        = number

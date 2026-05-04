@@ -59,6 +59,8 @@ terraform apply -var-file=terraform.tfvars -var "image_tag=<git-sha>"
 - ECR is created by the build workflow if it does not already exist.
 - RDS is not included yet. Database values are parameterized so RDS and Secrets Manager can be added cleanly later.
 - The ECS service is exposed through an AWS Application Load Balancer.
-- The EKS deployment is exposed through its own internet-facing Kubernetes service load balancer, separate from the ECS ALB.
+- The EKS deployment is managed by Argo CD from `k8s/web-app` and exposed through its own internet-facing Kubernetes service load balancer.
 - ECS sends container logs to CloudWatch Logs and has Container Insights enabled.
 - EKS has control-plane logging enabled and installs the CloudWatch observability add-on for cluster/container visibility.
+- Argo CD is installed into the `argocd` namespace and auto-syncs the `web-app` application from Git.
+- The example EKS node group uses two `t3.small` nodes so Argo CD, CloudWatch, and the app have enough pod capacity.

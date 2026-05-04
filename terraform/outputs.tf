@@ -32,3 +32,8 @@ output "ecs_alb_dns_name" {
   description = "Public DNS name for ECS ALB."
   value       = aws_lb.ecs.dns_name
 }
+
+output "cloudwatch_dashboard_name" {
+  description = "CloudWatch dashboard for ECS and EKS monitoring."
+  value       = aws_cloudwatch_dashboard.main.dashboard_name
+}

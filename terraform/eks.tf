@@ -56,9 +56,22 @@ resource "aws_iam_role_policy_attachment" "eks_ecr_readonly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+resource "aws_iam_role_policy_attachment" "eks_cloudwatch_agent" {
+  role       = aws_iam_role.eks_node.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_cloudwatch_log_group" "eks_cluster" {
+  name              = "/aws/eks/${local.eks_cluster_name}/cluster"
+  retention_in_days = var.log_retention_days
+
+  tags = local.common_tags
+}
+
 resource "aws_eks_cluster" "main" {
-  name     = local.eks_cluster_name
-  role_arn = aws_iam_role.eks_cluster.arn
+  name                      = local.eks_cluster_name
+  role_arn                  = aws_iam_role.eks_cluster.arn
+  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   vpc_config {
     subnet_ids              = aws_subnet.private[*].id
@@ -69,7 +82,10 @@ resource "aws_eks_cluster" "main" {
 
   tags = local.common_tags
 
-  depends_on = [aws_iam_role_policy_attachment.eks_cluster]
+  depends_on = [
+    aws_cloudwatch_log_group.eks_cluster,
+    aws_iam_role_policy_attachment.eks_cluster
+  ]
 }
 
 resource "aws_eks_node_group" "main" {
@@ -95,7 +111,20 @@ resource "aws_eks_node_group" "main" {
   depends_on = [
     aws_iam_role_policy_attachment.eks_worker_node,
     aws_iam_role_policy_attachment.eks_cni,
-    aws_iam_role_policy_attachment.eks_ecr_readonly
+    aws_iam_role_policy_attachment.eks_ecr_readonly,
+    aws_iam_role_policy_attachment.eks_cloudwatch_agent
+  ]
+}
+
+resource "aws_eks_addon" "cloudwatch_observability" {
+  cluster_name = aws_eks_cluster.main.name
+  addon_name   = "amazon-cloudwatch-observability"
+
+  tags = local.common_tags
+
+  depends_on = [
+    aws_eks_node_group.main,
+    aws_iam_role_policy_attachment.eks_cloudwatch_agent
   ]
 }
 

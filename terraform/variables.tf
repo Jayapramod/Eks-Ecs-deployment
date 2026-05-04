@@ -88,6 +88,18 @@ variable "eks_max_nodes" {
   default     = 2
 }
 
+variable "log_retention_days" {
+  description = "CloudWatch log retention in days."
+  type        = number
+  default     = 14
+}
+
+variable "alarm_actions" {
+  description = "SNS topic ARNs or other CloudWatch alarm actions. Leave empty to create alarms without notifications."
+  type        = list(string)
+  default     = []
+}
+
 variable "ecs_desired_count" {
   description = "Desired number of ECS Fargate tasks."
   type        = number

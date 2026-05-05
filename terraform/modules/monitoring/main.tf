@@ -1,10 +1,5 @@
-locals {
-  ecs_alb_suffix          = aws_lb.ecs.arn_suffix
-  ecs_target_group_suffix = aws_lb_target_group.ecs.arn_suffix
-}
-
 resource "aws_cloudwatch_metric_alarm" "ecs_high_cpu" {
-  alarm_name          = "${local.name}-ecs-high-cpu"
+  alarm_name          = "${var.name}-ecs-high-cpu"
   alarm_description   = "ECS service CPU utilization is above 80 percent."
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
@@ -19,15 +14,15 @@ resource "aws_cloudwatch_metric_alarm" "ecs_high_cpu" {
   ok_actions          = var.alarm_actions
 
   dimensions = {
-    ClusterName = aws_ecs_cluster.main.name
-    ServiceName = aws_ecs_service.app.name
+    ClusterName = var.ecs_cluster_name
+    ServiceName = var.ecs_service_name
   }
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "ecs_high_memory" {
-  alarm_name          = "${local.name}-ecs-high-memory"
+  alarm_name          = "${var.name}-ecs-high-memory"
   alarm_description   = "ECS service memory utilization is above 80 percent."
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
@@ -42,15 +37,15 @@ resource "aws_cloudwatch_metric_alarm" "ecs_high_memory" {
   ok_actions          = var.alarm_actions
 
   dimensions = {
-    ClusterName = aws_ecs_cluster.main.name
-    ServiceName = aws_ecs_service.app.name
+    ClusterName = var.ecs_cluster_name
+    ServiceName = var.ecs_service_name
   }
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "ecs_unhealthy_targets" {
-  alarm_name          = "${local.name}-ecs-unhealthy-targets"
+  alarm_name          = "${var.name}-ecs-unhealthy-targets"
   alarm_description   = "ECS ALB has unhealthy targets."
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
@@ -65,15 +60,15 @@ resource "aws_cloudwatch_metric_alarm" "ecs_unhealthy_targets" {
   ok_actions          = var.alarm_actions
 
   dimensions = {
-    LoadBalancer = local.ecs_alb_suffix
-    TargetGroup  = local.ecs_target_group_suffix
+    LoadBalancer = var.ecs_alb_suffix
+    TargetGroup  = var.ecs_target_group_suffix
   }
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "eks_node_group_capacity" {
-  alarm_name          = "${local.name}-eks-nodegroup-low-capacity"
+  alarm_name          = "${var.name}-eks-nodegroup-low-capacity"
   alarm_description   = "EKS node group has fewer in-service instances than expected."
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 2
@@ -88,14 +83,14 @@ resource "aws_cloudwatch_metric_alarm" "eks_node_group_capacity" {
   ok_actions          = var.alarm_actions
 
   dimensions = {
-    AutoScalingGroupName = aws_eks_node_group.main.resources[0].autoscaling_groups[0].name
+    AutoScalingGroupName = var.eks_node_asg_name
   }
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = "${local.name}-ops"
+  dashboard_name = "${var.name}-ops"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -106,7 +101,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 24
         height = 2
         properties = {
-          markdown = "# ${local.name} operations\nECS logs: ${aws_cloudwatch_log_group.ecs.name}\nEKS control-plane logs: ${aws_cloudwatch_log_group.eks_cluster.name}"
+          markdown = "# ${var.name} operations\nECS logs: ${var.ecs_log_group_name}\nEKS control-plane logs: ${var.eks_log_group_name}"
         }
       },
       {
@@ -120,7 +115,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           title  = "ECS CPU and Memory"
           view   = "timeSeries"
           metrics = [
-            ["AWS/ECS", "CPUUtilization", "ClusterName", aws_ecs_cluster.main.name, "ServiceName", aws_ecs_service.app.name],
+            ["AWS/ECS", "CPUUtilization", "ClusterName", var.ecs_cluster_name, "ServiceName", var.ecs_service_name],
             [".", "MemoryUtilization", ".", ".", ".", "."]
           ]
         }
@@ -136,7 +131,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           title  = "ECS ALB Target Health"
           view   = "timeSeries"
           metrics = [
-            ["AWS/ApplicationELB", "HealthyHostCount", "LoadBalancer", local.ecs_alb_suffix, "TargetGroup", local.ecs_target_group_suffix],
+            ["AWS/ApplicationELB", "HealthyHostCount", "LoadBalancer", var.ecs_alb_suffix, "TargetGroup", var.ecs_target_group_suffix],
             [".", "UnHealthyHostCount", ".", ".", ".", "."]
           ]
         }
@@ -152,7 +147,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           title  = "EKS Node Group Capacity"
           view   = "timeSeries"
           metrics = [
-            ["AWS/AutoScaling", "GroupDesiredCapacity", "AutoScalingGroupName", aws_eks_node_group.main.resources[0].autoscaling_groups[0].name],
+            ["AWS/AutoScaling", "GroupDesiredCapacity", "AutoScalingGroupName", var.eks_node_asg_name],
             [".", "GroupInServiceInstances", ".", "."]
           ]
         }

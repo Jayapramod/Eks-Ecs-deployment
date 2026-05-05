@@ -3,7 +3,11 @@ resource "kubernetes_namespace" "argocd" {
     name = "argocd"
   }
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [terraform_data.node_group_ready]
+}
+
+resource "terraform_data" "node_group_ready" {
+  input = var.node_group_dependency
 }
 
 resource "helm_release" "argocd" {
@@ -112,9 +116,9 @@ resource "helm_release" "argocd_apps" {
           additionalAnnotations = {}
           additionalLabels      = {}
           source = {
-            repoURL        = var.argocd_git_repo_url
+            repoURL        = var.git_repo_url
             targetRevision = "main"
-            path           = var.argocd_app_path
+            path           = var.app_path
           }
           destination = {
             server    = "https://kubernetes.default.svc"

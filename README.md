@@ -15,28 +15,40 @@ This starter separates responsibilities:
 AWS_GITHUB_ACTIONS_ROLE_ARN=arn:aws:iam::<account-id>:role/<role-name>
 ```
 
-3. Copy the Terraform example variables:
+3. Edit the environment variables file before applying:
 
 ```powershell
-Copy-Item terraform/terraform.tfvars.example terraform/terraform.tfvars
+notepad terraform/environments/dev/terraform.tfvars
 ```
+
+Use `terraform/environments/prod/terraform.tfvars` when you want to apply the prod parent.
 
 4. Optionally configure remote state:
 
 ```powershell
-Copy-Item terraform/backend.tf.example terraform/backend.tf
+Copy-Item terraform/environments/dev/backend.tf.example terraform/environments/dev/backend.tf
 ```
 
 5. Provision the infrastructure:
 
 ```powershell
-cd terraform
+cd terraform/environments/dev
 terraform init
 terraform plan -var-file=terraform.tfvars
 terraform apply -var-file=terraform.tfvars
 ```
 
-The included GitHub Actions Terraform plan workflow uses default variables so it can run before `terraform.tfvars` exists in the repository.
+Use `terraform/environments/dev` or `terraform/environments/prod` as parent entry points. The dev and prod folders intentionally use the same module shape for now, with different names/CIDRs so they can exist separately later.
+
+The child modules are organized here:
+
+```text
+terraform/modules/network     # VPC, subnets, routing, NAT
+terraform/modules/eks         # EKS cluster, node group, observability add-on
+terraform/modules/ecs         # ECS Fargate, ALB, target group, autoscaling
+terraform/modules/argocd      # Argo CD install and application sync
+terraform/modules/monitoring  # CloudWatch alarms and dashboard
+```
 
 6. Push to `main` or manually run the `Build and Push Docker Image` workflow.
 

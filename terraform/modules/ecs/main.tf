@@ -1,14 +1,14 @@
 resource "aws_cloudwatch_log_group" "ecs" {
-  name              = "/ecs/${local.name}"
+  name              = "/ecs/${var.name}"
   retention_in_days = var.log_retention_days
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
-resource "aws_security_group" "ecs_alb" {
-  name        = "${local.name}-ecs-alb"
+resource "aws_security_group" "alb" {
+  name        = "${var.name}-ecs-alb"
   description = "Allow public HTTP to ECS ALB"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = var.vpc_id
 
   ingress {
     from_port   = 80
@@ -24,19 +24,19 @@ resource "aws_security_group" "ecs_alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
-resource "aws_security_group" "ecs_task" {
-  name        = "${local.name}-ecs-task"
+resource "aws_security_group" "task" {
+  name        = "${var.name}-ecs-task"
   description = "Allow ALB traffic to ECS tasks"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = var.vpc_id
 
   ingress {
     from_port       = var.container_port
     to_port         = var.container_port
     protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_alb.id]
+    security_groups = [aws_security_group.alb.id]
   }
 
   egress {
@@ -46,24 +46,24 @@ resource "aws_security_group" "ecs_task" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
 resource "aws_lb" "ecs" {
-  name               = "${local.name}-ecs"
+  name               = "${var.name}-ecs"
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.ecs_alb.id]
-  subnets            = aws_subnet.public[*].id
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = var.public_subnet_ids
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
 resource "aws_lb_target_group" "ecs" {
-  name        = "${local.name}-ecs"
+  name        = "${var.name}-ecs"
   port        = var.container_port
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = var.vpc_id
 
   health_check {
     enabled             = true
@@ -74,7 +74,7 @@ resource "aws_lb_target_group" "ecs" {
     unhealthy_threshold = 3
   }
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
 resource "aws_lb_listener" "ecs" {
@@ -89,18 +89,18 @@ resource "aws_lb_listener" "ecs" {
 }
 
 resource "aws_ecs_cluster" "main" {
-  name = local.ecs_cluster_name
+  name = var.cluster_name
 
   setting {
     name  = "containerInsights"
     value = "enabled"
   }
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
-resource "aws_iam_role" "ecs_execution" {
-  name = "${local.name}-ecs-execution"
+resource "aws_iam_role" "execution" {
+  name = "${var.name}-ecs-execution"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -115,26 +115,26 @@ resource "aws_iam_role" "ecs_execution" {
     ]
   })
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_execution" {
-  role       = aws_iam_role.ecs_execution.name
+resource "aws_iam_role_policy_attachment" "execution" {
+  role       = aws_iam_role.execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_ecs_task_definition" "app" {
-  family                   = local.name
+  family                   = var.name
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "256"
   memory                   = "512"
-  execution_role_arn       = aws_iam_role.ecs_execution.arn
+  execution_role_arn       = aws_iam_role.execution.arn
 
   container_definitions = jsonencode([
     {
       name      = "fintech-app"
-      image     = local.image_uri
+      image     = var.image_uri
       essential = true
       portMappings = [
         {
@@ -162,22 +162,22 @@ resource "aws_ecs_task_definition" "app" {
     }
   ])
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
 resource "aws_ecs_service" "app" {
   name            = "fintech-app"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
-  desired_count   = var.ecs_desired_count
+  desired_count   = var.desired_count
   launch_type     = "FARGATE"
 
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
 
   network_configuration {
-    subnets          = aws_subnet.private[*].id
-    security_groups  = [aws_security_group.ecs_task.id]
+    subnets          = var.private_subnet_ids
+    security_groups  = [aws_security_group.task.id]
     assign_public_ip = false
   }
 
@@ -189,7 +189,7 @@ resource "aws_ecs_service" "app" {
 
   depends_on = [aws_lb_listener.ecs]
 
-  tags = local.common_tags
+  tags = var.common_tags
 }
 
 resource "aws_appautoscaling_target" "ecs" {
@@ -201,7 +201,7 @@ resource "aws_appautoscaling_target" "ecs" {
 }
 
 resource "aws_appautoscaling_policy" "ecs_cpu" {
-  name               = "${local.name}-ecs-cpu"
+  name               = "${var.name}-ecs-cpu"
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.ecs.resource_id
   scalable_dimension = aws_appautoscaling_target.ecs.scalable_dimension

@@ -43,6 +43,25 @@ module "eks" {
   common_tags         = local.common_tags
 }
 
+module "rds" {
+  source = "../../modules/rds"
+
+  name                  = local.name
+  vpc_id                = module.network.vpc_id
+  vpc_cidr              = var.vpc_cidr
+  private_subnet_ids    = module.network.private_subnet_ids
+  db_name               = var.db_name
+  db_user               = var.db_user
+  db_port               = var.db_port
+  instance_class        = var.db_instance_class
+  allocated_storage     = var.db_allocated_storage
+  multi_az              = var.db_multi_az
+  skip_final_snapshot   = var.db_skip_final_snapshot
+  deletion_protection   = var.db_deletion_protection
+  backup_retention_days = var.db_backup_retention_days
+  common_tags           = local.common_tags
+}
+
 module "ecs" {
   source = "../../modules/ecs"
 
@@ -56,12 +75,35 @@ module "ecs" {
   image_uri              = local.image_uri
   aws_region             = var.aws_region
   desired_count          = var.ecs_desired_count
-  db_host                = var.db_host
-  db_name                = var.db_name
-  db_user                = var.db_user
-  db_password_secret_arn = var.db_password_secret_arn
+  db_host                = module.rds.address
+  db_name                = module.rds.db_name
+  db_user                = module.rds.db_user
+  db_port                = module.rds.port
+  db_password_secret_arn = module.rds.password_secret_value_from
   log_retention_days     = var.log_retention_days
   common_tags            = local.common_tags
+}
+
+resource "kubernetes_secret" "app_env" {
+  metadata {
+    name      = "fintech-app-env"
+    namespace = "default"
+  }
+
+  data = {
+    DB_HOST     = module.rds.address
+    DB_NAME     = module.rds.db_name
+    DB_USER     = module.rds.db_user
+    DB_PORT     = tostring(module.rds.port)
+    DB_PASSWORD = module.rds.password
+  }
+
+  type = "Opaque"
+
+  depends_on = [
+    module.eks,
+    module.rds
+  ]
 }
 
 module "argocd" {
@@ -69,7 +111,7 @@ module "argocd" {
 
   git_repo_url          = var.argocd_git_repo_url
   app_path              = var.argocd_app_path
-  node_group_dependency = module.eks.node_group_id
+  node_group_dependency = kubernetes_secret.app_env.id
 }
 
 module "monitoring" {

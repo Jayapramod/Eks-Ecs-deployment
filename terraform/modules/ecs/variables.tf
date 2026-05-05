@@ -50,6 +50,10 @@ variable "db_user" {
   type = string
 }
 
+variable "db_port" {
+  type = number
+}
+
 variable "db_password_secret_arn" {
   type = string
 }

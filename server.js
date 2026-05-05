@@ -15,6 +15,16 @@ const pool = new Pool({
   port: Number(process.env.DB_PORT || 5432),
 });
 
+async function initializeDatabase() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
@@ -46,4 +56,11 @@ app.post("/api/users", async (req, res) => {
 });
 
 const port = Number(process.env.PORT || 3000);
-app.listen(port, () => console.log(`Backend running on port ${port}`));
+initializeDatabase()
+  .then(() => {
+    app.listen(port, () => console.log(`Backend running on port ${port}`));
+  })
+  .catch((err) => {
+    console.error("Database initialization failed", err);
+    process.exit(1);
+  });

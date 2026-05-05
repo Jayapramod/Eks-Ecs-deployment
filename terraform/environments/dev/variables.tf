@@ -98,11 +98,6 @@ variable "argocd_app_path" {
   default = "k8s/web-app"
 }
 
-variable "db_host" {
-  type    = string
-  default = ""
-}
-
 variable "db_name" {
   type    = string
   default = "webapp"
@@ -113,7 +108,37 @@ variable "db_user" {
   default = "app_user"
 }
 
-variable "db_password_secret_arn" {
+variable "db_port" {
+  type    = number
+  default = 5432
+}
+
+variable "db_instance_class" {
   type    = string
-  default = ""
+  default = "db.t3.micro"
+}
+
+variable "db_allocated_storage" {
+  type    = number
+  default = 20
+}
+
+variable "db_multi_az" {
+  type    = bool
+  default = false
+}
+
+variable "db_skip_final_snapshot" {
+  type    = bool
+  default = true
+}
+
+variable "db_deletion_protection" {
+  type    = bool
+  default = false
+}
+
+variable "db_backup_retention_days" {
+  type    = number
+  default = 1
 }

@@ -30,6 +30,14 @@ output "cloudwatch_dashboard_name" {
   value = module.monitoring.dashboard_name
 }
 
+output "rds_endpoint" {
+  value = module.rds.address
+}
+
+output "rds_secret_arn" {
+  value = module.rds.secret_arn
+}
+
 output "argocd_namespace" {
   value = module.argocd.namespace
 }

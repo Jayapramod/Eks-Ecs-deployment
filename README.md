@@ -46,6 +46,7 @@ The child modules are organized here:
 terraform/modules/network     # VPC, subnets, routing, NAT
 terraform/modules/eks         # EKS cluster, node group, observability add-on
 terraform/modules/ecs         # ECS Fargate, ALB, target group, autoscaling
+terraform/modules/rds         # Private PostgreSQL RDS and Secrets Manager password
 terraform/modules/argocd      # Argo CD install and application sync
 terraform/modules/monitoring  # CloudWatch alarms and dashboard
 ```
@@ -69,9 +70,10 @@ terraform apply -var-file=terraform.tfvars -var "image_tag=<git-sha>"
 
 - Terraform does not build the Docker image in this setup. GitHub Actions does.
 - ECR is created by the build workflow if it does not already exist.
-- RDS is not included yet. Database values are parameterized so RDS and Secrets Manager can be added cleanly later.
+- RDS PostgreSQL is deployed in private subnets and the generated DB password is stored in AWS Secrets Manager.
 - The ECS service is exposed through an AWS Application Load Balancer.
 - The EKS deployment is managed by Argo CD from `k8s/web-app` and exposed through its own internet-facing Kubernetes service load balancer.
+- The EKS app reads DB connection values from a Kubernetes secret created by Terraform.
 - ECS sends container logs to CloudWatch Logs and has Container Insights enabled.
 - EKS has control-plane logging enabled and installs the CloudWatch observability add-on for cluster/container visibility.
 - Argo CD is installed into the `argocd` namespace and auto-syncs the `web-app` application from Git.

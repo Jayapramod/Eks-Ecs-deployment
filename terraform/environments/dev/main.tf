@@ -95,6 +95,7 @@ resource "kubernetes_secret" "app_env" {
     DB_NAME     = module.rds.db_name
     DB_USER     = module.rds.db_user
     DB_PORT     = tostring(module.rds.port)
+    DB_SSL      = "true"
     DB_PASSWORD = module.rds.password
   }
 

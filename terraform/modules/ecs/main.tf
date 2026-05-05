@@ -124,8 +124,6 @@ resource "aws_iam_role_policy_attachment" "execution" {
 }
 
 resource "aws_iam_role_policy" "read_secrets" {
-  count = var.db_password_secret_arn == "" ? 0 : 1
-
   name = "${var.name}-ecs-read-secrets"
   role = aws_iam_role.execution.id
 
@@ -165,9 +163,10 @@ resource "aws_ecs_task_definition" "app" {
         { name = "DB_HOST", value = var.db_host },
         { name = "DB_NAME", value = var.db_name },
         { name = "DB_USER", value = var.db_user },
-        { name = "DB_PORT", value = tostring(var.db_port) }
+        { name = "DB_PORT", value = tostring(var.db_port) },
+        { name = "DB_SSL", value = "true" }
       ]
-      secrets = var.db_password_secret_arn == "" ? [] : [
+      secrets = [
         { name = "DB_PASSWORD", valueFrom = var.db_password_secret_arn }
       ]
       logConfiguration = {
